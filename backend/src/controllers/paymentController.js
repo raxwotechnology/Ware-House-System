@@ -219,8 +219,8 @@ export const deletePayment = asyncHandler(async (req, res) => {
                 }
             }
 
-            // 2. Reverse Bank Balance (if direct payment)
-            if (payment.bankAccountId && (payment.method === 'bank_transfer' || payment.method === 'card' || payment.method === 'mobile_wallet')) {
+            // 2. Reverse Bank Balance (if bankAccountId is present)
+            if (payment.bankAccountId) {
                 const bankAcc = await BankAccount.findById(payment.bankAccountId).session(session);
                 if (bankAcc) {
                     const amountChange = payment.direction === 'received' ? -payment.amount : payment.amount;

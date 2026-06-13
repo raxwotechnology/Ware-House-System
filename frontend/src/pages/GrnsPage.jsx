@@ -22,6 +22,8 @@ export default function GrnsPage() {
     const [supplierId, setSupplierId] = useState('');
     const [warehouseId, setWarehouseId] = useState('');
     const [items, setItems] = useState([{ productId: '', receivedQuantity: 1, unitPrice: 0, discountPercent: 0, discountAmount: 0, freeQuantity: 0 }]);
+    const [billDiscountPercent, setBillDiscountPercent] = useState('');
+    const [billDiscountAmount, setBillDiscountAmount] = useState('');
 
     const { data, isLoading } = useQuery({
         queryKey: ['grns', filters],
@@ -45,6 +47,8 @@ export default function GrnsPage() {
             toast.success('Goods received successfully');
             setIsFormOpen(false);
             setItems([{ productId: '', receivedQuantity: 1, unitPrice: 0, discountPercent: 0, discountAmount: 0, freeQuantity: 0 }]);
+            setBillDiscountPercent('');
+            setBillDiscountAmount('');
         }
     });
 
@@ -126,6 +130,8 @@ export default function GrnsPage() {
 
         createMutation.mutate({
             supplierId, warehouseId,
+            billDiscountPercent: +billDiscountPercent || 0,
+            billDiscountAmount: +billDiscountAmount || 0,
             items: validItems.map(i => ({ 
                 ...i, 
                 receivedQuantity: +i.receivedQuantity, 
@@ -137,6 +143,41 @@ export default function GrnsPage() {
             }))
         });
     };
+
+    const calculateDirectTotals = () => {
+        const subtotal = items.reduce((s, i) => {
+            const qty = +i.receivedQuantity || 0;
+            const price = +i.unitPrice || 0;
+            return s + (qty * price);
+        }, 0);
+
+        const lineDiscounts = items.reduce((s, i) => {
+            const qty = +i.receivedQuantity || 0;
+            const price = +i.unitPrice || 0;
+            const lineTotal = qty * price;
+            const discount = +i.discountAmount || (lineTotal * (+i.discountPercent || 0) / 100);
+            return s + discount;
+        }, 0);
+
+        const valueBeforeBillDiscount = Math.max(0, subtotal - lineDiscounts);
+
+        const billDiscPercentVal = +billDiscountPercent || 0;
+        const billDiscPercentAmt = (valueBeforeBillDiscount * billDiscPercentVal) / 100;
+        const billDiscFixedAmt = +billDiscountAmount || 0;
+        const totalBillDiscount = billDiscPercentAmt + billDiscFixedAmt;
+
+        const grandTotal = Math.max(0, valueBeforeBillDiscount - totalBillDiscount);
+
+        return {
+            subtotal,
+            lineDiscounts,
+            valueBeforeBillDiscount,
+            totalBillDiscount,
+            grandTotal
+        };
+    };
+
+    const directTotals = calculateDirectTotals();
 
     return (
         <div className="space-y-6">
@@ -202,6 +243,58 @@ export default function GrnsPage() {
                             ))}
                         </div>
                     </div>
+
+                    {items.length > 0 && (
+                        <div className="border-t pt-4 flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4">
+                            <div className="grid grid-cols-2 gap-4 w-full md:max-w-md">
+                                <Input 
+                                    label="Bill Discount (%)" 
+                                    type="number" 
+                                    step="0.01" 
+                                    min="0" 
+                                    max="100" 
+                                    value={billDiscountPercent} 
+                                    onChange={(e) => {
+                                        setBillDiscountPercent(e.target.value);
+                                        if (e.target.value) setBillDiscountAmount('');
+                                    }} 
+                                />
+                                <Input 
+                                    label="Bill Discount (Rs)" 
+                                    type="number" 
+                                    step="0.01" 
+                                    min="0" 
+                                    value={billDiscountAmount} 
+                                    onChange={(e) => {
+                                        setBillDiscountAmount(e.target.value);
+                                        if (e.target.value) setBillDiscountPercent('');
+                                    }} 
+                                />
+                            </div>
+                            <div className="bg-gray-50 border rounded-lg p-4 w-full md:max-w-xs space-y-1.5 text-sm self-stretch flex flex-col justify-center">
+                                <div className="flex justify-between text-gray-600">
+                                    <span>Subtotal:</span>
+                                    <span className="font-semibold">{fmt(directTotals.subtotal)}</span>
+                                </div>
+                                {directTotals.lineDiscounts > 0 && (
+                                    <div className="flex justify-between text-red-600">
+                                        <span>Line Discounts:</span>
+                                        <span>-{fmt(directTotals.lineDiscounts)}</span>
+                                    </div>
+                                )}
+                                {directTotals.totalBillDiscount > 0 && (
+                                    <div className="flex justify-between text-red-600 font-medium">
+                                        <span>Bill Discount:</span>
+                                        <span>-{fmt(directTotals.totalBillDiscount)}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between font-bold text-base border-t pt-1.5 text-gray-950">
+                                    <span>Grand Total:</span>
+                                    <span>{fmt(directTotals.grandTotal)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="pt-4 flex gap-2">
                         <Button variant="primary" fullWidth onClick={submit} loading={createMutation.isPending}>Confirm Receipt</Button>

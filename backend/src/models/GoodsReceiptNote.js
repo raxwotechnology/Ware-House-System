@@ -56,6 +56,9 @@ const grnSchema = new mongoose.Schema({
 
     items: [grnLineItemSchema],
 
+    billDiscountPercent: { type: Number, default: 0 },
+    billDiscountAmount: { type: Number, default: 0 },
+
     totalReceivedValue: { type: Number, default: 0 },
     totalAcceptedValue: { type: Number, default: 0 },
 
@@ -88,19 +91,27 @@ grnSchema.pre('save', async function () {
         this.grnNumber = `GRN-${seq}`;
     }
 
-    this.totalReceivedValue = +this.items.reduce((s, i) => {
+    const rawReceivedValue = this.items.reduce((s, i) => {
         const qty = i.receivedQuantity || 0;
         const lineTotal = qty * i.unitPrice;
         const discount = i.discountAmount || (lineTotal * (i.discountPercent || 0) / 100);
         return s + Math.max(0, lineTotal - discount);
-    }, 0).toFixed(2);
+    }, 0);
     
-    this.totalAcceptedValue = +this.items.reduce((s, i) => {
+    const rawAcceptedValue = this.items.reduce((s, i) => {
         const qty = i.acceptedQuantity || i.receivedQuantity || 0;
         const lineTotal = qty * i.unitPrice;
         const discount = i.discountAmount || (lineTotal * (i.discountPercent || 0) / 100);
         return s + Math.max(0, lineTotal - discount);
-    }, 0).toFixed(2);
+    }, 0);
+
+    const percentReceivedDiscount = rawReceivedValue * (this.billDiscountPercent || 0) / 100;
+    const fixedReceivedDiscount = this.billDiscountAmount || 0;
+    this.totalReceivedValue = +Math.max(0, rawReceivedValue - percentReceivedDiscount - fixedReceivedDiscount).toFixed(2);
+
+    const percentAcceptedDiscount = rawAcceptedValue * (this.billDiscountPercent || 0) / 100;
+    const fixedAcceptedDiscount = this.billDiscountAmount || 0;
+    this.totalAcceptedValue = +Math.max(0, rawAcceptedValue - percentAcceptedDiscount - fixedAcceptedDiscount).toFixed(2);
 });
 
 grnSchema.pre(/^find/, function (next) {

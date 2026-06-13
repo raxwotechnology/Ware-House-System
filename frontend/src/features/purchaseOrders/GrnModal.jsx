@@ -18,6 +18,9 @@ export default function GrnModal({ isOpen, onClose, purchaseOrder }) {
     const [notes, setNotes] = useState('');
     const [items, setItems] = useState([]);
 
+    const [billDiscountPercent, setBillDiscountPercent] = useState('');
+    const [billDiscountAmount, setBillDiscountAmount] = useState('');
+
     useEffect(() => {
         if (isOpen && purchaseOrder) {
             // Initialize items with pending quantities
@@ -49,6 +52,8 @@ export default function GrnModal({ isOpen, onClose, purchaseOrder }) {
             setVehicleNumber('');
             setDriverName('');
             setNotes('');
+            setBillDiscountPercent('');
+            setBillDiscountAmount('');
         }
     }, [isOpen, purchaseOrder]);
 
@@ -90,6 +95,8 @@ export default function GrnModal({ isOpen, onClose, purchaseOrder }) {
                 vehicleNumber: vehicleNumber || undefined,
                 driverName: driverName || undefined,
                 notes: notes || undefined,
+                billDiscountPercent: +billDiscountPercent || 0,
+                billDiscountAmount: +billDiscountAmount || 0,
                 items: toReceive.map((i) => ({
                     poLineItemId: i.poLineItemId,
                     productId: i.productId,
@@ -108,6 +115,43 @@ export default function GrnModal({ isOpen, onClose, purchaseOrder }) {
             onClose();
         } catch { }
     };
+
+    const fmt = (n) => new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR' }).format(n || 0);
+
+    const calculateTotals = () => {
+        const subtotal = items.reduce((s, i) => {
+            const qty = +i.receivedQuantity || 0;
+            const price = +i.unitPrice || 0;
+            return s + (qty * price);
+        }, 0);
+
+        const lineDiscounts = items.reduce((s, i) => {
+            const qty = +i.receivedQuantity || 0;
+            const price = +i.unitPrice || 0;
+            const lineTotal = qty * price;
+            const discount = +i.discountAmount || (lineTotal * (+i.discountPercent || 0) / 100);
+            return s + discount;
+        }, 0);
+
+        const valueBeforeBillDiscount = Math.max(0, subtotal - lineDiscounts);
+
+        const billDiscPercentVal = +billDiscountPercent || 0;
+        const billDiscPercentAmt = (valueBeforeBillDiscount * billDiscPercentVal) / 100;
+        const billDiscFixedAmt = +billDiscountAmount || 0;
+        const totalBillDiscount = billDiscPercentAmt + billDiscFixedAmt;
+
+        const grandTotal = Math.max(0, valueBeforeBillDiscount - totalBillDiscount);
+
+        return {
+            subtotal,
+            lineDiscounts,
+            valueBeforeBillDiscount,
+            totalBillDiscount,
+            grandTotal
+        };
+    };
+
+    const totals = calculateTotals();
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Receive Goods — PO ${purchaseOrder?.poNumber}`} size="xl">
@@ -168,6 +212,57 @@ export default function GrnModal({ isOpen, onClose, purchaseOrder }) {
                                     )}
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                )}
+                {items.length > 0 && (
+                    <div className="border-t pt-4 flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4">
+                        <div className="grid grid-cols-2 gap-4 w-full md:max-w-md">
+                            <Input 
+                                label="Bill Discount (%)" 
+                                type="number" 
+                                step="0.01" 
+                                min="0" 
+                                max="100" 
+                                value={billDiscountPercent} 
+                                onChange={(e) => {
+                                    setBillDiscountPercent(e.target.value);
+                                    if (e.target.value) setBillDiscountAmount('');
+                                }} 
+                            />
+                            <Input 
+                                label="Bill Discount (Rs)" 
+                                type="number" 
+                                step="0.01" 
+                                min="0" 
+                                value={billDiscountAmount} 
+                                onChange={(e) => {
+                                    setBillDiscountAmount(e.target.value);
+                                    if (e.target.value) setBillDiscountPercent('');
+                                }} 
+                            />
+                        </div>
+                        <div className="bg-gray-50 border rounded-lg p-4 w-full md:max-w-xs space-y-1.5 text-sm self-stretch flex flex-col justify-center">
+                            <div className="flex justify-between text-gray-600">
+                                <span>Subtotal:</span>
+                                <span className="font-semibold">{fmt(totals.subtotal)}</span>
+                            </div>
+                            {totals.lineDiscounts > 0 && (
+                                <div className="flex justify-between text-red-600">
+                                    <span>Line Discounts:</span>
+                                    <span>-{fmt(totals.lineDiscounts)}</span>
+                                </div>
+                            )}
+                            {totals.totalBillDiscount > 0 && (
+                                <div className="flex justify-between text-red-600 font-medium">
+                                    <span>Bill Discount:</span>
+                                    <span>-{fmt(totals.totalBillDiscount)}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between font-bold text-base border-t pt-1.5 text-gray-950">
+                                <span>Grand Total:</span>
+                                <span>{fmt(totals.grandTotal)}</span>
+                            </div>
                         </div>
                     </div>
                 )}

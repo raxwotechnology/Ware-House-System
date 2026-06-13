@@ -202,6 +202,16 @@ export const createSalesOrder = asyncHandler(async (req, res) => {
                 // Fetch Payment model dynamically to avoid circular dependencies if any
                 const Payment = (await import('../models/Payment.js')).default;
                 const PosSession = (await import('../models/PosSession.js')).default;
+                const BankAccount = (await import('../models/BankAccount.js')).default;
+
+                // Update BankAccount balance
+                const receivingAccount = await BankAccount.findOne({ category: 'received', isActive: true }).session(session);
+                let receivingAccountId = undefined;
+                if (receivingAccount) {
+                    receivingAccountId = receivingAccount._id;
+                    receivingAccount.currentBalance = +(receivingAccount.currentBalance + invoice.grandTotal).toFixed(2);
+                    await receivingAccount.save({ session });
+                }
                 
                 const payment = new Payment({
                     direction: 'received',
@@ -209,6 +219,7 @@ export const createSalesOrder = asyncHandler(async (req, res) => {
                     partyName: order.customerSnapshot.name,
                     amount: invoice.grandTotal,
                     method: 'cash',
+                    bankAccountId: receivingAccountId,
                     allocations: [{
                         documentType: 'invoice',
                         documentId: invoice._id,

@@ -77,15 +77,34 @@ export const createGrn = asyncHandler(async (req, res) => {
 
             await grn.save({ session });
 
+            // Calculate total raw accepted value first (to distribute fixed discount)
+            const rawAcceptedValue = grn.items.reduce((s, i) => {
+                const qty = i.acceptedQuantity || i.receivedQuantity || 0;
+                const lineTotal = qty * i.unitPrice;
+                const lineDisc = i.discountAmount || (lineTotal * (i.discountPercent || 0) / 100);
+                return s + Math.max(0, lineTotal - lineDisc);
+            }, 0);
+
             // Increase stock for each accepted item
             for (const grnItem of grn.items) {
                 const qtyToStock = grnItem.acceptedQuantity + (grnItem.freeQuantity || 0);
                 if (qtyToStock <= 0) continue;
 
                 const lineTotal = grnItem.acceptedQuantity * grnItem.unitPrice;
-                const discount = grnItem.discountAmount || (lineTotal * (grnItem.discountPercent || 0) / 100);
-                const effectiveTotalCost = Math.max(0, lineTotal - discount);
-                const effectiveCostPerUnit = effectiveTotalCost / qtyToStock;
+                const lineDiscount = grnItem.discountAmount || (lineTotal * (grnItem.discountPercent || 0) / 100);
+                const rawLineCost = Math.max(0, lineTotal - lineDiscount);
+
+                let finalLineCost = rawLineCost;
+                if (grn.billDiscountPercent > 0) {
+                    finalLineCost = rawLineCost - (rawLineCost * grn.billDiscountPercent / 100);
+                }
+                if (grn.billDiscountAmount > 0 && rawAcceptedValue > 0) {
+                    const proportionalDiscount = grn.billDiscountAmount * (rawLineCost / rawAcceptedValue);
+                    finalLineCost = rawLineCost - proportionalDiscount;
+                }
+                finalLineCost = Math.max(0, finalLineCost);
+
+                const effectiveCostPerUnit = finalLineCost / qtyToStock;
 
                 const result = await increaseStock({
                     productId: grnItem.productId,

@@ -13,6 +13,8 @@ const expenseSchema = new mongoose.Schema({
     // If paid via POS cash drawer
     posSessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'PosSession' },
 
+    bankAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'BankAccount' },
+
     status: { type: String, enum: ['paid', 'pending', 'cancelled'], default: 'paid' },
 
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

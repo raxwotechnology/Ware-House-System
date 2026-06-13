@@ -1,12 +1,20 @@
 import asyncHandler from 'express-async-handler';
 import Expense from '../models/Expense.js';
 import PosSession from '../models/PosSession.js';
+import BankAccount from '../models/BankAccount.js';
 
 export const createExpense = asyncHandler(async (req, res) => {
     const expense = new Expense({
         ...req.body,
         createdBy: req.user._id,
     });
+
+    const paymentAccount = await BankAccount.findOne({ category: 'payment', isActive: true });
+    if (paymentAccount) {
+        expense.bankAccountId = paymentAccount._id;
+        paymentAccount.currentBalance = +(paymentAccount.currentBalance - expense.amount).toFixed(2);
+        await paymentAccount.save();
+    }
 
     if (expense.paymentMethod === 'cash') {
         // Find active POS session for this user to deduct cash
@@ -52,6 +60,14 @@ export const getExpenses = asyncHandler(async (req, res) => {
 export const deleteExpense = asyncHandler(async (req, res) => {
     const expense = await Expense.findById(req.params.id);
     if (!expense) { res.status(404); throw new Error('Expense not found'); }
+
+    if (expense.bankAccountId) {
+        const bankAcc = await BankAccount.findById(expense.bankAccountId);
+        if (bankAcc) {
+            bankAcc.currentBalance = +(bankAcc.currentBalance + expense.amount).toFixed(2);
+            await bankAcc.save();
+        }
+    }
 
     if (expense.paymentMethod === 'cash' && expense.posSessionId) {
         const session = await PosSession.findById(expense.posSessionId);

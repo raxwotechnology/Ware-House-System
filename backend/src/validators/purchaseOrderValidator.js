@@ -46,7 +46,8 @@ const grnLineSchema = z.object({
 });
 
 export const createGrnSchema = z.object({
-    purchaseOrderId: objectId,
+    purchaseOrderId: objectId.optional(),
+    supplierId: objectId.optional(),
     warehouseId: objectId,
     receiptDate: z.string().optional(),
     supplierDeliveryNoteNumber: z.string().optional(),
@@ -56,4 +57,6 @@ export const createGrnSchema = z.object({
     transportCompany: z.string().optional(),
     items: z.array(grnLineSchema).min(1),
     notes: z.string().optional(),
+    billDiscountPercent: z.coerce.number().min(0).max(100).optional(),
+    billDiscountAmount: z.coerce.number().min(0).optional(),
 });

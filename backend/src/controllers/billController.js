@@ -87,6 +87,19 @@ export const createFromGrn = asyncHandler(async (req, res) => {
         d.setDate(d.getDate() + (supplier.paymentTerms.creditDays || 0));
     }
 
+    let finalGlobalDiscountPercent = globalDiscountPercent;
+    let finalGlobalDiscountAmount = globalDiscountAmount;
+
+    if (finalGlobalDiscountPercent === undefined && finalGlobalDiscountAmount === undefined) {
+        if (grns.length === 1) {
+            finalGlobalDiscountPercent = grns[0].billDiscountPercent || 0;
+            finalGlobalDiscountAmount = grns[0].billDiscountAmount || 0;
+        } else {
+            finalGlobalDiscountAmount = grns.reduce((s, g) => s + (g.billDiscountAmount || 0), 0);
+            finalGlobalDiscountPercent = 0;
+        }
+    }
+
     const bill = new Bill({
         supplierId: supplier._id,
         supplierSnapshot: {
@@ -105,8 +118,8 @@ export const createFromGrn = asyncHandler(async (req, res) => {
             type: supplier.paymentTerms?.type || 'credit',
             creditDays: supplier.paymentTerms?.creditDays || 0,
         },
-        globalDiscountPercent: globalDiscountPercent || 0,
-        globalDiscountAmount: globalDiscountAmount || 0,
+        globalDiscountPercent: finalGlobalDiscountPercent || 0,
+        globalDiscountAmount: finalGlobalDiscountAmount || 0,
         items: billItems,
         notes,
         approvedBy: req.user._id,

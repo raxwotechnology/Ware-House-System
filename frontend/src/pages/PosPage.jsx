@@ -25,13 +25,13 @@ import QuickCreateCustomerModal from '../features/customers/QuickCreateCustomerM
 import { posSessionsApi } from '../features/posSessions/posSessionsApi';
 import PosSessionModal from '../features/posSessions/PosSessionModal';
 import CloseRegisterModal from '../features/posSessions/CloseRegisterModal';
-import { useMobile } from '../hooks/useMobile';
 import ThermalReceipt from '../components/print/ThermalReceipt';
 import api from '../api/axios';
 import { useCompanySettings } from '../features/settings/useSettings';
 import { settingsApi } from '../features/settings/settingsApi';
 
 import { useAuthStore } from '../store/authStore';
+import { useMobile } from '../hooks/useMobile';
 
 export default function PosPage() {
     const { user } = useAuthStore();
@@ -388,17 +388,32 @@ export default function PosPage() {
         <div className="h-screen flex flex-col bg-gray-50 -m-4 md:-m-6">
             {/* Top bar */}
             <div className="bg-white border-b px-4 py-3 flex flex-col md:flex-row md:items-center gap-3">
-                <div className="flex items-center justify-between">
-                    <Button variant="outline" size="sm" onClick={() => navigate('/sales-orders')}>
-                        <ArrowLeft size={14} className="mr-1" /> Back
-                    </Button>
-                    <h1 className="font-bold text-lg flex items-center gap-2 md:hidden">
-                        <ShoppingCart size={20} /> POS
-                    </h1>
+                <div className="flex items-center justify-between w-full md:w-auto">
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => navigate('/sales-orders')}>
+                            <ArrowLeft size={14} className="mr-1" /> Back
+                        </Button>
+                        <h1 className="font-bold text-lg flex items-center gap-2 md:hidden">
+                            <ShoppingCart size={20} /> POS
+                        </h1>
+                    </div>
+                    {/* Mobile Register Open/Close button */}
+                    <div className="flex md:hidden gap-2">
+                        {activeSession ? (
+                            <Button variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50 text-xs py-1.5 px-2.5 h-[36px]" onClick={() => setIsCloseRegisterModalOpen(true)}>
+                                Close Reg
+                            </Button>
+                        ) : (
+                            <Button variant="primary" size="sm" className="text-xs py-1.5 px-2.5 h-[36px]" onClick={() => setIsSessionModalOpen(true)}>
+                                Open Reg
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
-                <div className="flex-1 flex flex-col xl:flex-row gap-3 items-center">
-                    <div className="w-full xl:flex-1 flex gap-2 items-center relative">
+                <div className="flex-1 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center w-full">
+                    {/* Customer & Phone section */}
+                    <div className="flex-1 flex flex-col sm:flex-row gap-2 relative">
                         <div className="flex-1 relative">
                             <input
                                 type="text"
@@ -442,56 +457,58 @@ export default function PosPage() {
                             )}
                         </div>
 
-                        <div className="w-36 sm:w-40 relative">
-                            <input
-                                type="text"
-                                placeholder="Phone No..."
-                                className="w-full px-3 py-2.5 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 outline-none border-gray-200 shadow-sm transition-all"
-                                value={customerId ? (selectedCustomer?.primaryContact?.phone || '') : phoneSearch || customerPhone}
-                                onChange={(e) => {
-                                    if (!customerId) {
-                                        setPhoneSearch(e.target.value);
-                                        setCustomerPhone(e.target.value);
-                                        setCustomerId('');
-                                    }
-                                }}
-                                readOnly={!!customerId}
-                            />
-                            {phoneSearch && !customerId && phoneSuggestions.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200" style={{minWidth:'220px'}}>
-                                    <div className="p-2 text-[10px] uppercase tracking-wider font-bold text-gray-400 bg-gray-50 border-b">By Phone</div>
-                                    {phoneSuggestions.map(c => (
-                                        <button
-                                            key={c._id}
-                                            className="w-full text-left px-3 py-2.5 text-sm hover:bg-primary-50 transition-colors border-b last:border-0 flex flex-col"
-                                            onClick={() => {
-                                                setCustomerId(c._id);
-                                                setCustomerSearch('');
-                                                setPhoneSearch('');
-                                                setCustomerPhone('');
-                                            }}
-                                        >
-                                            <span className="font-bold text-gray-800">{c.displayName}</span>
-                                            <span className="text-[10px] text-gray-500">{c.primaryContact?.phone} • {c.customerCode}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            <div className="flex-1 sm:w-40 relative">
+                                <input
+                                    type="text"
+                                    placeholder="Phone No..."
+                                    className="w-full px-3 py-2.5 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 outline-none border-gray-200 shadow-sm transition-all"
+                                    value={customerId ? (selectedCustomer?.primaryContact?.phone || '') : phoneSearch || customerPhone}
+                                    onChange={(e) => {
+                                        if (!customerId) {
+                                            setPhoneSearch(e.target.value);
+                                            setCustomerPhone(e.target.value);
+                                            setCustomerId('');
+                                        }
+                                    }}
+                                    readOnly={!!customerId}
+                                />
+                                {phoneSearch && !customerId && phoneSuggestions.length > 0 && (
+                                    <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200" style={{minWidth:'220px'}}>
+                                        <div className="p-2 text-[10px] uppercase tracking-wider font-bold text-gray-400 bg-gray-50 border-b">By Phone</div>
+                                        {phoneSuggestions.map(c => (
+                                            <button
+                                                key={c._id}
+                                                className="w-full text-left px-3 py-2.5 text-sm hover:bg-primary-50 transition-colors border-b last:border-0 flex flex-col"
+                                                onClick={() => {
+                                                    setCustomerId(c._id);
+                                                    setCustomerSearch('');
+                                                    setPhoneSearch('');
+                                                    setCustomerPhone('');
+                                                }}
+                                            >
+                                                <span className="font-bold text-gray-800">{c.displayName}</span>
+                                                <span className="text-[10px] text-gray-500">{c.primaryContact?.phone} • {c.customerCode}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
 
-                        <Button variant="outline" size="sm" onClick={() => setIsCustomerModalOpen(true)} title={selectedCustomer ? "Edit Customer" : "Advanced Add"} className="h-[42px] px-2 shrink-0">
-                            <UserPlus size={16} className={selectedCustomer ? "text-blue-600" : ""} />
-                        </Button>
+                            <Button variant="outline" size="sm" onClick={() => setIsCustomerModalOpen(true)} title={selectedCustomer ? "Edit Customer" : "Advanced Add"} className="h-[42px] px-3 shrink-0">
+                                <UserPlus size={16} className={selectedCustomer ? "text-blue-600" : ""} />
+                            </Button>
+                        </div>
                     </div>
 
-                    <div className="w-full sm:w-56">
+                    <div className="w-full lg:w-56">
                         <Select placeholder="Warehouse"
                             options={warehouses.map((w) => ({ value: w._id, label: w.name }))}
                             value={sourceWarehouseId} onChange={(e) => { setSourceWarehouseId(e.target.value); setCart([]); }} />
                     </div>
 
                     {selectedCustomer && (
-                        <div className="text-xs text-gray-600 self-start sm:self-center">
+                        <div className="text-xs text-gray-600 self-start lg:self-center shrink-0">
                             <p>Credit: <span className="font-semibold">{fmt(selectedCustomer.creditStatus?.availableCredit || 0)}</span></p>
                             {selectedCustomer.creditStatus?.onCreditHold && (
                                 <Badge variant="danger">On Credit Hold</Badge>
@@ -500,7 +517,7 @@ export default function PosPage() {
                     )}
                 </div>
 
-                <div className="hidden md:flex gap-2">
+                <div className="hidden md:flex gap-2 shrink-0">
                     {activeSession ? (
                         <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" onClick={() => setIsCloseRegisterModalOpen(true)}>
                             Close Register
@@ -518,8 +535,16 @@ export default function PosPage() {
 
             {/* Main 2-column layout */}
             <div className="flex-1 flex overflow-hidden relative">
+                {/* Backdrop for mobile cart drawer */}
+                {showCartOnMobile && (
+                    <div 
+                        className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 transition-opacity duration-300 lg:hidden"
+                        onClick={() => setShowCartOnMobile(false)}
+                    />
+                )}
+
                 {/* Left: Product catalog */}
-                <div className={`flex-1 flex flex-col bg-gray-50 p-4 overflow-hidden ${isMobile && showCartOnMobile ? 'hidden' : 'flex'}`}>
+                <div className="flex-1 flex flex-col bg-gray-50 p-4 overflow-hidden flex">
                     {/* Search */}
                     <div className="flex gap-2 mb-3">
                         <div className="relative flex-1">
@@ -666,15 +691,17 @@ export default function PosPage() {
                     </div>
                 </div>
 
-                {/* Right: Cart (Fixed width on desktop, full screen on mobile when active) */}
-                <div className={`${isMobile ? (showCartOnMobile ? 'fixed inset-0 z-50 flex' : 'hidden') : 'w-96 flex'} bg-white border-l flex-col`}>
+                {/* Right: Cart (Fixed width on desktop, sliding drawer on mobile/tablet when active) */}
+                <div className={`
+                    fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] shadow-2xl flex flex-col bg-white border-l h-full transition-transform duration-300 ease-in-out
+                    lg:static lg:w-96 lg:translate-x-0 lg:shadow-none lg:flex
+                    ${showCartOnMobile ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+                `}>
                     <div className="p-4 border-b flex items-center justify-between bg-white sticky top-0 z-10">
                         <div className="flex items-center gap-2">
-                            {isMobile && (
-                                <button onClick={() => setShowCartOnMobile(false)} className="p-2 -ml-2 text-gray-400">
-                                    <ArrowLeft size={20} />
-                                </button>
-                            )}
+                            <button onClick={() => setShowCartOnMobile(false)} className="p-2 -ml-2 text-gray-400 lg:hidden" aria-label="Close cart">
+                                <ArrowLeft size={20} />
+                            </button>
                             <h2 className="font-bold flex items-center gap-2">
                                 <ShoppingCart size={18} /> Cart
                                 {totals.itemCount > 0 && <Badge>{totals.itemCount}</Badge>}
@@ -690,32 +717,32 @@ export default function PosPage() {
                             <div className="text-center text-gray-500 py-12">
                                 <ShoppingCart size={32} className="mx-auto mb-2 text-gray-300" />
                                 <p className="text-sm">Cart is empty</p>
-                                <button onClick={() => setShowCartOnMobile(false)} className="mt-4 text-primary-600 text-sm font-bold md:hidden">Browse Products</button>
+                                <button onClick={() => setShowCartOnMobile(false)} className="mt-4 text-primary-600 text-sm font-bold lg:hidden">Browse Products</button>
                             </div>
                         ) : (
                             cart.map((item) => (
                                 <div key={item.productId} className="border border-gray-100 rounded-xl p-3 bg-gray-50/30">
                                     <div className="flex items-start justify-between mb-2">
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-bold text-gray-900 truncate">{item.name}</p>
-                                            <p className="text-[10px] text-gray-500 font-mono">{item.code}</p>
+                                        <div className="flex-1 min-w-0 pr-2">
+                                            <p className="text-sm font-bold text-gray-900 break-words leading-tight">{item.name}</p>
+                                            <p className="text-[10px] text-gray-500 font-mono mt-0.5">{item.code}</p>
                                         </div>
                                         <button onClick={() => removeFromCart(item.productId)}
-                                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0">
                                             <Trash2 size={14} />
                                         </button>
                                     </div>
                                     <div className="flex items-center justify-between gap-4">
                                         <div className="flex items-center gap-1 bg-white border border-gray-100 rounded-lg p-0.5 shadow-sm">
                                             <button onClick={() => updateQty(item.productId, -1)}
-                                                className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 text-gray-500 rounded-md">
+                                                className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center hover:bg-gray-50 text-gray-500 rounded-md transition-colors">
                                                 <Minus size={14} />
                                             </button>
                                             <input type="number" value={item.qty} min="1" max={item.available}
                                                 onChange={(e) => setQty(item.productId, e.target.value)}
                                                 className="w-10 text-center text-sm font-bold bg-transparent border-0 focus:ring-0 p-0" />
                                             <button onClick={() => updateQty(item.productId, 1)}
-                                                className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 text-gray-500 rounded-md">
+                                                className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center hover:bg-gray-50 text-gray-500 rounded-md transition-colors">
                                                 <Plus size={14} />
                                             </button>
                                         </div>
@@ -732,24 +759,26 @@ export default function PosPage() {
 
                     {/* Summary */}
                     <div className="border-t p-4 space-y-3 bg-gray-50 sticky bottom-0">
-                        <div className="space-y-1.5">
+                        <div className="space-y-2">
                             <div className="flex justify-between text-xs text-gray-500 font-medium">
                                 <span>Subtotal</span><span>{fmt(totals.subtotal)}</span>
                             </div>
 
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-500 font-medium">Discount %</span>
-                                <input type="number" min="0" max="100" step="0.01"
-                                    value={orderDiscountPercent}
-                                    onChange={(e) => setOrderDiscountPercent(e.target.value)}
-                                    className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-xs text-right font-bold focus:ring-2 focus:ring-primary-500 outline-none" />
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-500 font-medium">Discount (Rs)</span>
-                                <input type="number" min="0" step="0.01"
-                                    value={orderDiscountAmount}
-                                    onChange={(e) => setOrderDiscountAmount(e.target.value)}
-                                    className="w-20 px-2 py-1 border border-gray-200 rounded-lg text-xs text-right font-bold focus:ring-2 focus:ring-primary-500 outline-none" />
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="flex justify-between items-center bg-white border border-gray-200 rounded-lg px-2 py-1 shadow-xs">
+                                    <span className="text-[10px] text-gray-500 font-semibold uppercase">Disc %</span>
+                                    <input type="number" min="0" max="100" step="0.01"
+                                        value={orderDiscountPercent}
+                                        onChange={(e) => setOrderDiscountPercent(e.target.value)}
+                                        className="w-12 text-right font-bold focus:outline-none text-xs bg-transparent border-0 p-0 focus:ring-0" />
+                                </div>
+                                <div className="flex justify-between items-center bg-white border border-gray-200 rounded-lg px-2 py-1 shadow-xs">
+                                    <span className="text-[10px] text-gray-500 font-semibold uppercase">Disc (Rs)</span>
+                                    <input type="number" min="0" step="0.01"
+                                        value={orderDiscountAmount}
+                                        onChange={(e) => setOrderDiscountAmount(e.target.value)}
+                                        className="w-16 text-right font-bold focus:outline-none text-xs bg-transparent border-0 p-0 focus:ring-0" />
+                                </div>
                             </div>
                             {totals.orderDiscount > 0 && (
                                 <div className="flex justify-between text-xs font-bold text-red-600">
@@ -778,15 +807,15 @@ export default function PosPage() {
                 </div>
 
                 {/* Mobile Cart Toggle Button */}
-                {isMobile && !showCartOnMobile && (
+                {!showCartOnMobile && (
                     <button
                         onClick={() => setShowCartOnMobile(true)}
-                        className="fixed bottom-6 right-6 w-14 h-14 bg-primary-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-transform"
+                        className="lg:hidden fixed bottom-6 right-6 w-14 h-14 bg-primary-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-95 hover:scale-105 active:scale-90 transition-all duration-200"
                     >
                         <div className="relative">
                             <ShoppingCart size={24} />
                             {totals.itemCount > 0 && (
-                                <span className="absolute -top-3 -right-3 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">
+                                <span className="absolute -top-3 -right-3 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white animate-pulse">
                                     {totals.itemCount}
                                 </span>
                             )}
