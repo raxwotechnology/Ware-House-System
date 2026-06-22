@@ -514,13 +514,20 @@ export default function ProductFormModal({ isOpen, onClose, product = null }) {
                                     error={errors.mrp?.message}
                                     {...register('mrp')}
                                 />
-                                <Input
-                                    label="Call Price (LKR)"
-                                    type="number"
-                                    step="0.01"
-                                    error={errors.callPrice?.message}
-                                    {...register('callPrice')}
-                                />
+                                <div className="flex flex-col">
+                                    <Input
+                                        label="Call Price (LKR)"
+                                        type="number"
+                                        step="0.01"
+                                        error={errors.callPrice?.message}
+                                        {...register('callPrice')}
+                                    />
+                                    {product && product.callPriceUpdatedAt && (
+                                        <span className="text-[11px] text-gray-500 mt-1">
+                                            Last Updated: {new Date(product.callPriceUpdatedAt).toLocaleString()}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}

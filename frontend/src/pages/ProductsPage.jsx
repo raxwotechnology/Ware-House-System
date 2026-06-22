@@ -100,7 +100,14 @@ export default function ProductsPage() {
             key: 'callPrice',
             label: 'Call Price',
             render: (row) => row.callPrice > 0 ? (
-                <span className="font-medium text-amber-700">{formatPrice(row.callPrice)}</span>
+                <div className="flex flex-col">
+                    <span className="font-medium text-amber-700">{formatPrice(row.callPrice)}</span>
+                    {row.callPriceUpdatedAt && (
+                        <span className="text-[10px] text-gray-500 mt-0.5" title="Call Price Last Updated">
+                            {new Date(row.callPriceUpdatedAt).toLocaleString()}
+                        </span>
+                    )}
+                </div>
             ) : (
                 <span className="text-gray-400 text-xs">—</span>
             ),

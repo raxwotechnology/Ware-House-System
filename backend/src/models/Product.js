@@ -115,6 +115,9 @@ const productSchema = new mongoose.Schema(
             type: Number,
             min: 0,
         },
+        callPriceUpdatedAt: {
+            type: Date,
+        },
         currency: {
             type: String,
             default: 'LKR',
@@ -199,6 +202,10 @@ productSchema.pre('save', async function () {
     if (this.isNew && !this.productCode) {
         const seq = await getNextSequence('product');
         this.productCode = `PRD-${seq}`;
+    }
+
+    if (this.isModified('callPrice')) {
+        this.callPriceUpdatedAt = new Date();
     }
 });
 

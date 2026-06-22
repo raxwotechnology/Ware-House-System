@@ -113,35 +113,39 @@ export const getProductById = asyncHandler(async (req, res) => {
 });
 
 export const updateProduct = asyncHandler(async (req, res) => {
-    const product = await Product.findByIdAndUpdate(
-        req.params.id,
-        { ...req.body, updatedBy: req.user._id },
-        { new: true, runValidators: true }
-    )
-        .populate('categoryId', 'name code')
-        .populate('brandId', 'name');
+    const product = await Product.findById(req.params.id);
 
     if (!product) {
         res.status(404);
         throw new Error('Product not found');
     }
 
+    // Update fields
+    Object.assign(product, req.body);
+    product.updatedBy = req.user._id;
+
+    await product.save();
+
+    const populated = await Product.findById(product._id)
+        .populate('categoryId', 'name code')
+        .populate('brandId', 'name');
+
     // Sync denormalized fields in StockItems
     try {
         const StockItem = mongoose.model('StockItem');
         await StockItem.updateMany(
-            { productId: product._id },
+            { productId: populated._id },
             { 
-                productName: product.name,
-                productCode: product.productCode,
-                unitOfMeasure: product.unitOfMeasure
+                productName: populated.name,
+                productCode: populated.productCode,
+                unitOfMeasure: populated.unitOfMeasure
             }
         );
     } catch (err) {
         console.error('StockItem sync failed:', err);
     }
 
-    res.json({ success: true, data: product });
+    res.json({ success: true, data: populated });
 });
 
 export const deleteProduct = asyncHandler(async (req, res) => {
