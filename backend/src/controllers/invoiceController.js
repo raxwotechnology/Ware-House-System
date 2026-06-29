@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import Invoice from '../models/Invoice.js';
 import Customer from '../models/Customer.js';
 import SalesOrder from '../models/SalesOrder.js';
+import CompanySettings from '../models/CompanySettings.js';
 
 /**
  * Helper: recalculate customer credit balance
@@ -430,7 +431,154 @@ export const deleteInvoice = asyncHandler(async (req, res) => {
     }
     invoice.deletedAt = new Date();
     await invoice.save();
-    res.json({ success: true, message: 'Draft invoice deleted' });
+    res.json({ success: true, data: invoice });
+});
+
+/**
+ * GET /api/invoices/:id/print-json (Public route for Bluetooth Print app)
+ */
+export const getInvoicePrintJson = asyncHandler(async (req, res) => {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+        res.status(404);
+        throw new Error('Invoice not found');
+    }
+
+    const settings = (await CompanySettings.findOne()) || {
+        companyName: 'RC TRADERS',
+        address: 'Colombo, Sri Lanka',
+        phone: '+94 11 XXX XXXX',
+        receiptFooterMessage: 'THANK YOU FOR YOUR BUSINESS!\nPLEASE VISIT AGAIN.'
+    };
+
+    const printSequence = [];
+
+    // Helper: push text command
+    const addText = (content, bold = 0, align = 0, format = 0) => {
+        printSequence.push({
+            type: 0, // text
+            content: content || ' ',
+            bold,
+            align,
+            format
+        });
+    };
+
+    // Helper: format two-column text (default width 32 characters for 58mm/80mm safety)
+    const formatLine = (left, right, width = 32) => {
+        const spaces = width - left.length - right.length;
+        if (spaces > 0) {
+            return left + ' '.repeat(spaces) + right;
+        }
+        return left + ' ' + right;
+    };
+
+    // 1. Company Info Header
+    addText(settings.companyName, 1, 1, 3); // Bold, Centered, Double Width
+    if (settings.address) {
+        addText(settings.address, 0, 1, 0);
+    }
+    if (settings.phone) {
+        addText(`TEL: ${settings.phone}`, 0, 1, 0);
+    }
+    if (settings.email) {
+        addText(settings.email, 0, 1, 0);
+    }
+    if (settings.taxRegistrationNumber) {
+        addText(`VAT NO: ${settings.taxRegistrationNumber}`, 1, 1, 0);
+    }
+
+    addText('================================', 0, 1, 0);
+
+    // 2. Receipt metadata
+    addText(formatLine('Receipt No:', invoice.invoiceNumber || ''), 1, 0, 0);
+    
+    const dateStr = invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleString('en-LK', {
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    }) : '—';
+    addText(formatLine('Date:', dateStr), 0, 0, 0);
+
+    const customer = invoice.customerSnapshot || {};
+    if (customer.name) {
+        addText(formatLine('Customer:', customer.name), 1, 0, 0);
+    }
+    if (customer.phone) {
+        addText(formatLine('Contact:', customer.phone), 0, 0, 0);
+    }
+
+    addText('--------------------------------', 0, 1, 0);
+
+    // 3. Item headers
+    addText(formatLine('Description', 'Amount'), 1, 0, 0);
+    addText('--------------------------------', 0, 1, 0);
+
+    // 4. Line items
+    const items = invoice.items || [];
+    items.forEach((item) => {
+        // Product Name (bold)
+        addText(item.productName, 1, 0, 0);
+        // Quantity x Price and lineTotal
+        const qtyStr = `  ${item.quantity} x ${item.unitPrice.toFixed(2)}`;
+        const totalStr = item.lineTotal.toFixed(2);
+        addText(formatLine(qtyStr, totalStr), 0, 0, 0);
+        
+        if (item.discountPercent > 0) {
+            addText(`    Disc: ${item.discountPercent}% (-${item.lineDiscount.toFixed(2)})`, 0, 0, 4); // small
+        }
+    });
+
+    addText('--------------------------------', 0, 1, 0);
+
+    // 5. Totals
+    addText(formatLine('Subtotal', invoice.subtotal.toFixed(2)), 0, 0, 0);
+    
+    const discount = (invoice.totalDiscount || 0) + (invoice.orderDiscount?.amount || 0);
+    if (discount > 0) {
+        addText(formatLine('Discount', `-${discount.toFixed(2)}`), 0, 0, 0);
+    }
+    if (invoice.totalTax > 0) {
+        addText(formatLine('Tax', invoice.totalTax.toFixed(2)), 0, 0, 0);
+    }
+
+    addText('================================', 0, 1, 0);
+    addText(formatLine('TOTAL', invoice.grandTotal.toFixed(2)), 1, 0, 1); // double height
+    addText(formatLine('Paid Amount', invoice.grandTotal.toFixed(2)), 1, 0, 0);
+
+    if (invoice.cashReceived !== undefined && invoice.cashReceived > 0) {
+        addText(formatLine('Cash Received', invoice.cashReceived.toFixed(2)), 0, 0, 0);
+    }
+    if (invoice.changeReturned !== undefined && invoice.changeReturned > 0) {
+        addText(formatLine('Change Returned', invoice.changeReturned.toFixed(2)), 0, 0, 0);
+    }
+    
+    addText(formatLine('Balance Due', (invoice.balanceDue || 0).toFixed(2)), 1, 0, 0);
+
+    addText('================================', 0, 1, 0);
+
+    // 6. Footer
+    if (settings.receiptFooterMessage) {
+        settings.receiptFooterMessage.split('\n').forEach((line) => {
+            addText(line.trim(), 1, 1, 0);
+        });
+    }
+
+    addText(' ', 0, 1, 0); // Spacing before barcode/QR code
+
+    // 7. QR Code for the Invoice Number
+    printSequence.push({
+        type: 3, // QR Code
+        value: invoice.invoiceNumber,
+        size: 40,
+        align: 1 // center
+    });
+
+    // Convert print sequence array to key-indexed object (matches PHP forced object)
+    const forceObject = {};
+    printSequence.forEach((item, index) => {
+        forceObject[index.toString()] = item;
+    });
+
+    res.json(forceObject);
 });
 
 // Exported for use by payments module

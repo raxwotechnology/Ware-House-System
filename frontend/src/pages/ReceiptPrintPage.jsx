@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Printer, ArrowLeft, FileText } from 'lucide-react';
 import { invoicesApi } from '../features/invoices/invoicesApi';
 import { useCompanySettings } from '../features/settings/useSettings';
+import { getBluetoothPrintUrl } from '../utils/printHelpers';
 
 const fmt = (n) => new Intl.NumberFormat('en-LK', {
     minimumFractionDigits: 2, maximumFractionDigits: 2
@@ -90,12 +91,23 @@ export default function ReceiptPrintPage() {
                         <FileText size={16} /> View Invoice
                     </button>
                 </div>
-                <button
-                    onClick={() => window.print()}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 active:scale-95 transition shadow"
-                >
-                    <Printer size={16} /> Print Receipt
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => {
+                            const url = getBluetoothPrintUrl(invoice._id);
+                            window.location.href = url;
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 active:scale-95 transition shadow"
+                    >
+                        <Printer size={16} /> Bluetooth Print
+                    </button>
+                    <button
+                        onClick={() => window.print()}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 active:scale-95 transition shadow"
+                    >
+                        <Printer size={16} /> Print Receipt
+                    </button>
+                </div>
             </div>
 
             {/* Receipt content - centered on screen, full-width when printing */}

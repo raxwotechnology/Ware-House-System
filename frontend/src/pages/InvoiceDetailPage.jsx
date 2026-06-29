@@ -17,6 +17,7 @@ import PrintableInvoice from '../components/print/PrintableInvoice';
 import ThermalReceipt from '../components/print/ThermalReceipt';
 import { useQuery } from '@tanstack/react-query';
 import { paymentsApi } from '../features/payments/paymentsApi';
+import { getBluetoothPrintUrl } from '../utils/printHelpers';
 
 const paymentStatusVariant = {
     unpaid: 'warning', partially_paid: 'info', paid: 'success',
@@ -115,6 +116,9 @@ export default function InvoiceDetailPage() {
                         </Button>
                         <Button variant="outline" onClick={() => handlePrint('thermal')} className="text-gray-700">
                             <Receipt size={16} className="mr-1.5" /> POS Receipt
+                        </Button>
+                        <Button variant="outline" onClick={() => window.location.href = getBluetoothPrintUrl(inv._id)} className="text-emerald-700 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800">
+                            <Printer size={16} className="mr-1.5 text-emerald-600" /> Bluetooth Print
                         </Button>
                         {inv.balanceDue > 0 && inv.paymentStatus !== 'cancelled' && (
                             <Button variant="outline" onClick={() => navigate(`/payments/new?invoiceId=${inv._id}`)}>
