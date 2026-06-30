@@ -551,7 +551,7 @@ export const getInvoicePrintJson = asyncHandler(async (req, res) => {
         addText(formatLine('Change Returned', invoice.changeReturned.toFixed(2)), 0, 0, 0);
     }
     
-    addText(formatLine('Balance Due', (invoice.balanceDue || 0).toFixed(2)), 1, 0, 0);
+    addText(formatLine('Amount Due', (invoice.balanceDue || 0).toFixed(2)), 1, 0, 0);
 
     addText('================================', 0, 1, 0);
 

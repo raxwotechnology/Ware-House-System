@@ -151,7 +151,7 @@ const ThermalReceipt = forwardRef(({ invoice, payments = [], companyInfo: propCo
                             <span className="font-bold">{fmt(totalPaid)}</span>
                         </div>
                         <div className="flex justify-between text-sm mt-1 pb-1 border-b border-dashed border-gray-400">
-                            <span className="uppercase text-gray-600">Balance Due</span>
+                            <span className="uppercase text-gray-600">Amount Due</span>
                             <span className="font-bold">{fmt(balanceDue)}</span>
                         </div>
                     </>

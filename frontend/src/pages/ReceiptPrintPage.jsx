@@ -222,7 +222,7 @@ export default function ReceiptPrintPage() {
                         </div>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                        <span style={{ textTransform: 'uppercase', color: '#555', fontSize: '10px' }}>Balance Due</span>
+                        <span style={{ textTransform: 'uppercase', color: '#555', fontSize: '10px' }}>Amount Due</span>
                         <span style={{ fontWeight: '700' }}>{fmt(invoice.balanceDue || 0)}</span>
                     </div>
                 </div>
