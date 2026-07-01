@@ -356,14 +356,16 @@ export default function PosPage() {
                 toast.success('Order saved as draft');
                 navigate(`/sales-orders/${result.data._id}`);
             } else {
-                let fetchedInvoiceId = null;
-                try {
-                    const invoicesRes = await api.get('/invoices', { params: { salesOrderId: result.data._id } });
-                    if (invoicesRes.data?.data?.length > 0) {
-                        fetchedInvoiceId = invoicesRes.data.data[0]._id;
+                let fetchedInvoiceId = result.invoiceId || result.data?.invoiceId || null;
+                if (!fetchedInvoiceId) {
+                    try {
+                        const invoicesRes = await api.get('/invoices', { params: { salesOrderId: result.data._id } });
+                        if (invoicesRes.data?.data?.length > 0) {
+                            fetchedInvoiceId = invoicesRes.data.data[0]._id;
+                        }
+                    } catch (err) {
+                        console.error('Could not fetch invoice as fallback', err);
                     }
-                } catch (err) {
-                    console.error('Could not fetch invoice', err);
                 }
 
                 toast.success('Sale complete! Invoice generated.');

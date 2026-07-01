@@ -154,6 +154,7 @@ invoiceSchema.index({ customerId: 1, invoiceDate: -1 });
 invoiceSchema.index({ paymentStatus: 1, dueDate: 1 });
 invoiceSchema.index({ status: 1, invoiceDate: -1 });
 invoiceSchema.index({ agingBucket: 1 });
+invoiceSchema.index({ deletedAt: 1, invoiceDate: 1 });
 
 invoiceSchema.pre('save', async function () {
     if (this.isNew && !this.invoiceNumber) {

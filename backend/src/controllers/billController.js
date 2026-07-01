@@ -133,14 +133,21 @@ export const createFromGrn = asyncHandler(async (req, res) => {
     res.status(201).json({ success: true, data: populated });
 });
 
+let lastBillAgingUpdate = null;
+
 /**
  * Helper to dynamically calculate and update aging details for unpaid bills
  */
-export const updateBillAging = async () => {
+export const updateBillAging = async (force = false) => {
+    const todayStr = new Date().toDateString();
+    if (!force && lastBillAgingUpdate === todayStr) {
+        return;
+    }
+
     const unpaidBills = await Bill.find({
         paymentStatus: { $in: ['unpaid', 'partially_paid', 'overdue'] },
         deletedAt: null
-    });
+    }).select('_id dueDate daysPastDue paymentStatus agingBucket');
     
     const now = new Date();
     const bulkOps = [];
@@ -185,6 +192,8 @@ export const updateBillAging = async () => {
     if (bulkOps.length > 0) {
         await Bill.bulkWrite(bulkOps);
     }
+
+    lastBillAgingUpdate = todayStr;
 };
 
 export const getBills = asyncHandler(async (req, res) => {

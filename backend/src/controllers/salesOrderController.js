@@ -126,6 +126,7 @@ export const createSalesOrder = asyncHandler(async (req, res) => {
     const order = new SalesOrder(orderData);
 
     // Use transaction for stock and invoice
+    let invoice;
     const session = await mongoose.startSession();
     try {
         await session.withTransaction(async () => {
@@ -193,7 +194,7 @@ export const createSalesOrder = asyncHandler(async (req, res) => {
 
             // AUTO-INVOICE AND PAYMENT for POS
             if (order.source === 'pos' && order.status === 'approved') {
-                const invoice = await generateInvoiceFromOrders({
+                invoice = await generateInvoiceFromOrders({
                     salesOrderIds: [order._id],
                     createdBy: req.user._id,
                     session,
@@ -264,7 +265,11 @@ export const createSalesOrder = asyncHandler(async (req, res) => {
         .populate('salesRepId', 'firstName lastName')
         .populate('items.productId', 'name productCode');
 
-    res.status(201).json({ success: true, data: populated });
+    res.status(201).json({ 
+        success: true, 
+        data: populated, 
+        invoiceId: invoice ? (invoice._id || invoice.id) : undefined 
+    });
 });
 
 /**

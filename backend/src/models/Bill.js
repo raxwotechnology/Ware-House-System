@@ -109,6 +109,7 @@ const billSchema = new mongoose.Schema({
 billSchema.index({ supplierId: 1, billDate: -1 });
 billSchema.index({ paymentStatus: 1, dueDate: 1 });
 billSchema.index({ agingBucket: 1 });
+billSchema.index({ deletedAt: 1, billDate: 1 });
 
 billSchema.pre('save', async function () {
     if (this.isNew && !this.billNumber) {
@@ -169,6 +170,7 @@ billSchema.pre('save', async function () {
         this.daysOutstanding = Math.floor((Date.now() - new Date(this.billDate)) / (1000 * 60 * 60 * 24));
     }
 });
+
 
 billSchema.pre(/^find/, function (next) {
     if (!this.getOptions || !this.getOptions().includeDeleted) {

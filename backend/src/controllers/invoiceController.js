@@ -213,14 +213,21 @@ export const createFromSalesOrder = asyncHandler(async (req, res) => {
     }
 });
 
+let lastInvoiceAgingUpdate = null;
+
 /**
  * Helper to dynamically calculate and update aging details for unpaid invoices
  */
-export const updateInvoiceAging = async () => {
+export const updateInvoiceAging = async (force = false) => {
+    const todayStr = new Date().toDateString();
+    if (!force && lastInvoiceAgingUpdate === todayStr) {
+        return;
+    }
+
     const unpaidInvoices = await Invoice.find({
         paymentStatus: { $in: ['unpaid', 'partially_paid', 'overdue'] },
         deletedAt: null
-    });
+    }).select('_id customerId dueDate daysPastDue paymentStatus agingBucket');
     
     const now = new Date();
     const bulkOps = [];
@@ -270,6 +277,8 @@ export const updateInvoiceAging = async () => {
             await updateCustomerBalance(cid);
         }
     }
+
+    lastInvoiceAgingUpdate = todayStr;
 };
 
 /**

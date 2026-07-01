@@ -67,6 +67,7 @@ const paymentSchema = new mongoose.Schema({
 paymentSchema.index({ customerId: 1, paymentDate: -1 });
 paymentSchema.index({ supplierId: 1, paymentDate: -1 });
 paymentSchema.index({ direction: 1, status: 1 });
+paymentSchema.index({ deletedAt: 1, direction: 1, paymentDate: 1 });
 
 paymentSchema.pre('save', async function () {
     if (this.isNew && !this.paymentNumber) {
