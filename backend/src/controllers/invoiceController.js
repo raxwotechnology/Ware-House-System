@@ -464,8 +464,8 @@ export const getInvoicePrintJson = asyncHandler(async (req, res) => {
         });
     };
 
-    // Helper: format two-column text (default width 32 characters for 58mm/80mm safety)
-    const formatLine = (left, right, width = 32) => {
+    // Helper: format two-column text (default width 38 characters to cover full width)
+    const formatLine = (left, right, width = 38) => {
         const spaces = width - left.length - right.length;
         if (spaces > 0) {
             return left + ' '.repeat(spaces) + right;
@@ -473,8 +473,8 @@ export const getInvoicePrintJson = asyncHandler(async (req, res) => {
         return left + ' ' + right;
     };
 
-    // 1. Company Info Header
-    addText(settings.companyName, 1, 1, 3); // Bold, Centered, Double Width
+    // 1. Company Info Header (using normal width, bold to ensure correct centering)
+    addText(settings.companyName, 1, 1, 0); // Bold, Centered, Normal Width
     if (settings.address) {
         addText(settings.address, 0, 1, 0);
     }
@@ -488,7 +488,7 @@ export const getInvoicePrintJson = asyncHandler(async (req, res) => {
         addText(`VAT NO: ${settings.taxRegistrationNumber}`, 1, 1, 0);
     }
 
-    addText('================================', 0, 1, 0);
+    addText('======================================', 0, 1, 0);
 
     // 2. Receipt metadata
     addText(formatLine('Receipt No:', invoice.invoiceNumber || ''), 1, 0, 0);
@@ -506,11 +506,11 @@ export const getInvoicePrintJson = asyncHandler(async (req, res) => {
         addText(formatLine('Contact:', customer.phone), 0, 0, 0);
     }
 
-    addText('--------------------------------', 0, 1, 0);
+    addText('--------------------------------------', 0, 1, 0);
 
     // 3. Item headers
     addText(formatLine('Description', 'Amount'), 1, 0, 0);
-    addText('--------------------------------', 0, 1, 0);
+    addText('--------------------------------------', 0, 1, 0);
 
     // 4. Line items
     const items = invoice.items || [];
@@ -527,7 +527,7 @@ export const getInvoicePrintJson = asyncHandler(async (req, res) => {
         }
     });
 
-    addText('--------------------------------', 0, 1, 0);
+    addText('--------------------------------------', 0, 1, 0);
 
     // 5. Totals
     addText(formatLine('Subtotal', invoice.subtotal.toFixed(2)), 0, 0, 0);
@@ -540,7 +540,7 @@ export const getInvoicePrintJson = asyncHandler(async (req, res) => {
         addText(formatLine('Tax', invoice.totalTax.toFixed(2)), 0, 0, 0);
     }
 
-    addText('================================', 0, 1, 0);
+    addText('======================================', 0, 1, 0);
     addText(formatLine('TOTAL', invoice.grandTotal.toFixed(2)), 1, 0, 1); // double height
     addText(formatLine('Paid Amount', invoice.grandTotal.toFixed(2)), 1, 0, 0);
 
@@ -553,7 +553,7 @@ export const getInvoicePrintJson = asyncHandler(async (req, res) => {
     
     addText(formatLine('Amount Due', (invoice.balanceDue || 0).toFixed(2)), 1, 0, 0);
 
-    addText('================================', 0, 1, 0);
+    addText('======================================', 0, 1, 0);
 
     // 6. Footer
     if (settings.receiptFooterMessage) {
@@ -562,15 +562,7 @@ export const getInvoicePrintJson = asyncHandler(async (req, res) => {
         });
     }
 
-    addText(' ', 0, 1, 0); // Spacing before barcode/QR code
-
-    // 7. QR Code for the Invoice Number
-    printSequence.push({
-        type: 3, // QR Code
-        value: invoice.invoiceNumber,
-        size: 40,
-        align: 1 // center
-    });
+    addText(' ', 0, 1, 0); // Spacing before end of receipt
 
     // Convert print sequence array to key-indexed object (matches PHP forced object)
     const forceObject = {};
